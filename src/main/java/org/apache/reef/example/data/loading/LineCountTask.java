@@ -1,4 +1,4 @@
-package org.apache.reef.ml.als;
+package org.apache.reef.example.data.loading;
 
 import com.microsoft.reef.io.data.loading.api.DataSet;
 import com.microsoft.reef.io.network.util.Pair;
@@ -13,14 +13,14 @@ import java.util.logging.Logger;
 /**
  * 'ALS' Task.
  */
-public class AlsTask implements Task {
+public class LineCountTask implements Task {
 
-  private static final Logger LOG = Logger.getLogger(AlsTask.class.getName());
+  private static final Logger LOG = Logger.getLogger(LineCountTask.class.getName());
 
   private final DataSet<LongWritable, Text> dataSet;
 
   @Inject
-  AlsTask(DataSet<LongWritable, Text> dataSet) {
+  LineCountTask(DataSet<LongWritable, Text> dataSet) {
 
     this.dataSet = dataSet;
   }

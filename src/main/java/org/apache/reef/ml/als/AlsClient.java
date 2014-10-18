@@ -27,6 +27,7 @@ public final class AlsClient {
       .set(DriverConfiguration.DRIVER_IDENTIFIER, "ALS")
       .set(DriverConfiguration.GLOBAL_LIBRARIES, EnvironmentUtils.getClassLocation(AlsDriver.class))
       .set(DriverConfiguration.ON_DRIVER_STARTED, AlsDriver.StartHandler.class)
+      .set(DriverConfiguration.ON_EVALUATOR_ALLOCATED, AlsDriver.EvaluatorAllocatedHandler.class)
       .build();
 
     return driverConfiguration;

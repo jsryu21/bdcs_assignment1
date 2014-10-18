@@ -1,17 +1,16 @@
 package org.apache.reef.ml.als;
 
+import com.microsoft.reef.driver.context.ActiveContext;
 import com.microsoft.reef.driver.context.ContextConfiguration;
-import com.microsoft.reef.driver.evaluator.AllocatedEvaluator;
-import com.microsoft.reef.driver.evaluator.EvaluatorRequest;
-import com.microsoft.reef.driver.evaluator.EvaluatorRequestor;
+import com.microsoft.reef.driver.task.CompletedTask;
 import com.microsoft.reef.driver.task.TaskConfiguration;
-import com.microsoft.tang.Configuration;
+import com.microsoft.reef.io.data.loading.api.DataLoadingService;
+import com.microsoft.tang.Tang;
 import com.microsoft.tang.annotations.Unit;
-import com.microsoft.tang.exceptions.BindException;
 import com.microsoft.wake.EventHandler;
-import com.microsoft.wake.time.event.StartTime;
 
 import javax.inject.Inject;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -23,61 +22,81 @@ public final class AlsDriver {
 
   private static final Logger LOG = Logger.getLogger(AlsDriver.class.getName());
 
-  private EvaluatorRequestor requestor = null;
+  private final AtomicInteger ctrlCtxId = new AtomicInteger();
+  private final AtomicInteger lineCnt = new AtomicInteger();
+  private final AtomicInteger ctrlTaskId = new AtomicInteger();
+  private final AtomicInteger totalTask = new AtomicInteger();
+
+  private final DataLoadingService dataLoadingService;
 
   /**
    * Job driver constructor - instantiated via TANG.
-   * @param requestor evaluator requestor object used to create new evaluator containers.
+   * @param dataLoadingService
    */
   @Inject
-  public AlsDriver(final EvaluatorRequestor requestor) {
-    LOG.log(Level.INFO, "Instantiated 'AlsDriver'");
-
-    this.requestor = requestor;
+  public AlsDriver(final DataLoadingService dataLoadingService) {
+    this.dataLoadingService = dataLoadingService;
+    this.totalTask.set(dataLoadingService.getNumberOfPartitions());
   }
 
-  /**
-   * Handles the StartTime event: Request as single Evaluator.
-   */
-  public final class StartHandler implements EventHandler<StartTime> {
+  public class ContextActiveHandler implements EventHandler<ActiveContext> {
 
     @Override
-    public void onNext(final StartTime startTime) {
-      LOG.log(Level.INFO, "Request Evaluator");
+    public void onNext(final ActiveContext activeContext) {
 
-      AlsDriver.this.requestor.submit(
-        EvaluatorRequest.newBuilder()
-          .setMemory(128)
-          .setNumber(3)
-          .setNumberOfCores(1)
-          .build()
-      );
-    }
-  }
+      final String contextId = activeContext.getId();
+      LOG.log(Level.INFO, "Context active: {0}", contextId);
 
-  /**
-   * Handles AllocatedEvaluator: Build a Context & Task Configuration
-   * and submit them to the Driver
-   */
-  public final class EvaluatorAllocatedHandler implements EventHandler<AllocatedEvaluator> {
+      if (dataLoadingService.isDataLoadedContext(activeContext)) {
 
-    @Override
-    public void onNext(final AllocatedEvaluator allocatedEvaluator) {
-      LOG.log(Level.INFO, "Submitting ALS task to AllocatedEvaluator: {0}", allocatedEvaluator);
-      try {
-        final Configuration contextConfiguration = ContextConfiguration.CONF
-          .set(ContextConfiguration.IDENTIFIER, "AlsContext").build();
+        final String alsContextId = "AlsCtx-" + ctrlCtxId.getAndIncrement();
+        LOG.log(Level.INFO, "Submit Als context {0} to: {1}",
+            new Object[] { alsContextId, contextId });
 
-        final Configuration taskConfiguration = TaskConfiguration.CONF
-          .set(TaskConfiguration.IDENTIFIER, "AlsTask")
-          .set(TaskConfiguration.TASK, AlsTask.class).build();
+        activeContext.submitContext(Tang.Factory.getTang()
+            .newConfigurationBuilder(ContextConfiguration.CONF
+                .set(ContextConfiguration.IDENTIFIER, alsContextId).build())
+            .build());
 
-        // Let's submit context and task to the evaluator
-        allocatedEvaluator.submitContextAndTask(contextConfiguration, taskConfiguration);
-      } catch (final BindException ex) {
-        throw new RuntimeException("Unable to setup Task or Context configuration.", ex);
+      } else if (activeContext.getId().startsWith("AlsCtx")) {
+
+        final String alsTaskId = "AlsTask-" + ctrlTaskId.getAndIncrement();
+        LOG.log(Level.INFO, "Submit Als task {0} to: {1}",
+            new Object[] { alsTaskId, contextId });
+
+        activeContext.submitTask(TaskConfiguration.CONF
+            .set(TaskConfiguration.IDENTIFIER, alsTaskId)
+            .set(TaskConfiguration.TASK, AlsTask.class)
+            .build());
+
+      } else {
+        LOG.log(Level.INFO, "Als Task {0} -- Closing", contextId);
+        activeContext.close();
       }
     }
   }
 
+  public class TaskCompletedHandler implements EventHandler<CompletedTask> {
+
+    @Override
+    public void onNext(final CompletedTask completedTask) {
+
+      final String taskId = completedTask.getId();
+      LOG.log(Level.INFO, "Completed Task: {0}", taskId);
+
+      final byte[] retBytes = completedTask.get();
+      final String retStr = retBytes == null ? "No RetVal" : new String(retBytes);
+      LOG.log(Level.INFO, "Line count from {0} : {1}",
+          new Object[] { taskId, retStr });
+
+      lineCnt.addAndGet(Integer.parseInt(retStr));
+
+      if (totalTask.decrementAndGet() <= 0) {
+        LOG.log(Level.INFO, "Total line count: {0}", lineCnt.get());
+      }
+
+      LOG.log(Level.INFO, "Releasing Context: {0}", taskId);
+      completedTask.getActiveContext().close();
+    }
+  }
 }

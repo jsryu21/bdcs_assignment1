@@ -1,4 +1,4 @@
-package org.apache.reef.ml.als;
+package org.apache.reef.example.data.loading;
 
 import com.microsoft.reef.client.DriverConfiguration;
 import com.microsoft.reef.client.DriverLauncher;
@@ -24,9 +24,9 @@ import java.util.logging.Logger;
 /**
  * The Client for Alternating Least Squares ML.
  */
-public final class AlsClient {
+public final class LineCountClient {
 
-  private static final Logger LOG = Logger.getLogger(AlsClient.class.getName());
+  private static final Logger LOG = Logger.getLogger(LineCountClient.class.getName());
 
   private static final int NUM_LOCAL_THREADS = 10;
   private static final int NUM_SPLITS = 2;
@@ -90,10 +90,10 @@ public final class AlsClient {
         .setInputPath(inputDir)
         .setNumberOfDesiredSplits(NUM_SPLITS)
         .setDriverConfigurationModule(DriverConfiguration.CONF
-            .set(DriverConfiguration.DRIVER_IDENTIFIER, "AlsDriver")
-            .set(DriverConfiguration.GLOBAL_LIBRARIES, EnvironmentUtils.getClassLocation(AlsDriver.class))
-            .set(DriverConfiguration.ON_CONTEXT_ACTIVE, AlsDriver.ContextActiveHandler.class)
-            .set(DriverConfiguration.ON_TASK_COMPLETED, AlsDriver.TaskCompletedHandler.class))
+            .set(DriverConfiguration.DRIVER_IDENTIFIER, "LineCount")
+            .set(DriverConfiguration.GLOBAL_LIBRARIES, EnvironmentUtils.getClassLocation(LineCount.class))
+            .set(DriverConfiguration.ON_CONTEXT_ACTIVE, LineCount.ContextActiveHandler.class)
+            .set(DriverConfiguration.ON_TASK_COMPLETED, LineCount.TaskCompletedHandler.class))
         .build();
 
     final LauncherStatus status =

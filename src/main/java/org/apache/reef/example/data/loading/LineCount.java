@@ -1,4 +1,4 @@
-package org.apache.reef.ml.als;
+package org.apache.reef.example.data.loading;
 
 import com.microsoft.reef.driver.context.ActiveContext;
 import com.microsoft.reef.driver.context.ContextConfiguration;
@@ -18,9 +18,9 @@ import java.util.logging.Logger;
  * The Driver for Alternating Least Squares ML.
  */
 @Unit
-public final class AlsDriver {
+public final class LineCount {
 
-  private static final Logger LOG = Logger.getLogger(AlsDriver.class.getName());
+  private static final Logger LOG = Logger.getLogger(LineCount.class.getName());
 
   private final AtomicInteger ctrlCtxId = new AtomicInteger();
   private final AtomicInteger lineCnt = new AtomicInteger();
@@ -34,7 +34,7 @@ public final class AlsDriver {
    * @param dataLoadingService
    */
   @Inject
-  public AlsDriver(final DataLoadingService dataLoadingService) {
+  public LineCount(final DataLoadingService dataLoadingService) {
     this.dataLoadingService = dataLoadingService;
     this.totalTask.set(dataLoadingService.getNumberOfPartitions());
   }
@@ -60,13 +60,13 @@ public final class AlsDriver {
 
       } else if (activeContext.getId().startsWith("AlsCtx")) {
 
-        final String alsTaskId = "AlsTask-" + ctrlTaskId.getAndIncrement();
+        final String alsTaskId = "LineCountTask-" + ctrlTaskId.getAndIncrement();
         LOG.log(Level.INFO, "Submit Als task {0} to: {1}",
             new Object[] { alsTaskId, contextId });
 
         activeContext.submitTask(TaskConfiguration.CONF
             .set(TaskConfiguration.IDENTIFIER, alsTaskId)
-            .set(TaskConfiguration.TASK, AlsTask.class)
+            .set(TaskConfiguration.TASK, LineCountTask.class)
             .build());
 
       } else {

@@ -18,9 +18,9 @@ import java.util.logging.Logger;
  * The Driver for Alternating Least Squares ML.
  */
 @Unit
-public final class LineCount {
+public final class LineCountDriver {
 
-  private static final Logger LOG = Logger.getLogger(LineCount.class.getName());
+  private static final Logger LOG = Logger.getLogger(LineCountDriver.class.getName());
 
   private final AtomicInteger ctrlCtxId = new AtomicInteger();
   private final AtomicInteger lineCnt = new AtomicInteger();
@@ -34,7 +34,7 @@ public final class LineCount {
    * @param dataLoadingService
    */
   @Inject
-  public LineCount(final DataLoadingService dataLoadingService) {
+  public LineCountDriver(final DataLoadingService dataLoadingService) {
     this.dataLoadingService = dataLoadingService;
     this.totalTask.set(dataLoadingService.getNumberOfPartitions());
   }

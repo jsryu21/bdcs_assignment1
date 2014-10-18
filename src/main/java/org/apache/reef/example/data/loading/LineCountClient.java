@@ -90,10 +90,10 @@ public final class LineCountClient {
         .setInputPath(inputDir)
         .setNumberOfDesiredSplits(NUM_SPLITS)
         .setDriverConfigurationModule(DriverConfiguration.CONF
-            .set(DriverConfiguration.DRIVER_IDENTIFIER, "LineCount")
-            .set(DriverConfiguration.GLOBAL_LIBRARIES, EnvironmentUtils.getClassLocation(LineCount.class))
-            .set(DriverConfiguration.ON_CONTEXT_ACTIVE, LineCount.ContextActiveHandler.class)
-            .set(DriverConfiguration.ON_TASK_COMPLETED, LineCount.TaskCompletedHandler.class))
+            .set(DriverConfiguration.DRIVER_IDENTIFIER, "LineCountDriver")
+            .set(DriverConfiguration.GLOBAL_LIBRARIES, EnvironmentUtils.getClassLocation(LineCountDriver.class))
+            .set(DriverConfiguration.ON_CONTEXT_ACTIVE, LineCountDriver.ContextActiveHandler.class)
+            .set(DriverConfiguration.ON_TASK_COMPLETED, LineCountDriver.TaskCompletedHandler.class))
         .build();
 
     final LauncherStatus status =

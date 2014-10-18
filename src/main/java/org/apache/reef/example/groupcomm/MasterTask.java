@@ -15,6 +15,7 @@ import org.apache.reef.example.groupcomm.operatorNames.ModelReceiveAckReducer;
 import org.apache.reef.example.groupcomm.parameters.AllCommunicationGroup;
 import org.apache.reef.example.groupcomm.parameters.ModelDimensions;
 
+import javax.inject.Inject;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -34,6 +35,7 @@ public class MasterTask implements Task {
 
   private final int dimensions;
 
+  @Inject
   public MasterTask(
       final GroupCommClient groupCommClient,
       final @Parameter(ModelDimensions.class) int dimensions) {

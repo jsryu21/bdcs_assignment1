@@ -115,7 +115,7 @@ public final class BroadcastDriver {
     @Override
     public void onNext(final StartTime startTime) {
       final int numEvals = BroadcastDriver.this.numberOfReceivers + 1;
-      LOG.log(Level.FINE, "Requesting {0} evaluators", numEvals);
+      LOG.log(Level.INFO, "Requesting {0} evaluators", numEvals);
       BroadcastDriver.this.requestor.submit(EvaluatorRequest.newBuilder()
           .setNumber(numEvals)
           .setMemory(2048)
@@ -147,7 +147,7 @@ public final class BroadcastDriver {
     @Override
     public void onNext(final FailedTask failedTask) {
 
-      LOG.log(Level.FINE, "Got failed Task: {0}", failedTask.getId());
+      LOG.log(Level.INFO, "Got failed Task: {0}", failedTask.getId());
 
       final ActiveContext activeContext = failedTask.getActiveContext().get();
       final Configuration partialTaskConf = Tang.Factory.getTang()
@@ -161,14 +161,14 @@ public final class BroadcastDriver {
                   .set(PoisonedConfiguration.CRASH_TIMEOUT, "1")
                   .build()
           )
-          .bindNamedParameter(ModelDimensions.class, new Integer(dimensions).toString())
+          .bindNamedParameter(ModelDimensions.class, Integer.toString(dimensions))
           .build();
 
       // Do not add the task back:
-      // allCommGroup.addTask(partialTaskConf);
+      allCommGroup.addTask(partialTaskConf);
 
       final Configuration taskConf = groupCommDriver.getTaskConfiguration(partialTaskConf);
-      LOG.log(Level.FINER, "Submit SlaveTask conf: {0}", confSerializer.toString(taskConf));
+      LOG.log(Level.INFO, "Submit SlaveTask conf: {0}", confSerializer.toString(taskConf));
 
       activeContext.submitTask(taskConf);
     }
@@ -181,7 +181,9 @@ public final class BroadcastDriver {
     @Override
     public void onNext(final ActiveContext activeContext) {
 
-      LOG.log(Level.FINE, "Got active context: {0}", activeContext.getId());
+      final String ctxId = activeContext.getId();
+
+      LOG.log(Level.INFO, "Got active context: {0}", ctxId);
 
       /**
        * The active context can be either from data loading service or after network
@@ -205,7 +207,7 @@ public final class BroadcastDriver {
           allCommGroup.addTask(partialTaskConf);
 
           final Configuration taskConf = groupCommDriver.getTaskConfiguration(partialTaskConf);
-          LOG.log(Level.FINER, "Submit MasterTask conf: {0}", confSerializer.toString(taskConf));
+          LOG.log(Level.INFO, "Submit MasterTask conf: {0}", confSerializer.toString(taskConf));
 
           activeContext.submitTask(taskConf);
 
@@ -216,17 +218,19 @@ public final class BroadcastDriver {
                   TaskConfiguration.CONF
                       .set(TaskConfiguration.IDENTIFIER, getSlaveId(activeContext))
                       .set(TaskConfiguration.TASK, SlaveTask.class)
-                      .build(),
+                      .build()/*,
                   PoisonedConfiguration.TASK_CONF
                       .set(PoisonedConfiguration.CRASH_PROBABILITY, "0.4")
                       .set(PoisonedConfiguration.CRASH_TIMEOUT, "1")
-                      .build())
+                      .build()*/)
               .bindNamedParameter(ModelDimensions.class, Integer.toString(dimensions))
               .build();
 
+          LOG.log(Level.INFO, "SlaveId: {0}, ContextId: {1}", new Object[] {slaveIds, ctxId});
           allCommGroup.addTask(partialTaskConf);
+
           final Configuration taskConf = groupCommDriver.getTaskConfiguration(partialTaskConf);
-          LOG.log(Level.FINER, "Submit SlaveTask conf: {0}", confSerializer.toString(taskConf));
+          LOG.log(Level.INFO, "Submit SlaveTask conf: {0}", confSerializer.toString(taskConf));
 
           activeContext.submitTask(taskConf);
         }
@@ -240,8 +244,8 @@ public final class BroadcastDriver {
         }
 
         final Configuration serviceConf = groupCommDriver.getServiceConfiguration();
-        LOG.log(Level.FINER, "Submit GCContext conf: {0}", confSerializer.toString(contextConf));
-        LOG.log(Level.FINER, "Submit Service conf: {0}", confSerializer.toString(serviceConf));
+        LOG.log(Level.INFO, "Submit GCContext conf: {0}", confSerializer.toString(contextConf));
+        LOG.log(Level.INFO, "Submit Service conf: {0}", confSerializer.toString(serviceConf));
 
         activeContext.submitContextAndService(contextConf, serviceConf);
       }
@@ -267,10 +271,10 @@ public final class BroadcastDriver {
 
     @Override
     public void onNext(final ClosedContext closedContext) {
-      LOG.log(Level.FINE, "Got closed context: {0}", closedContext.getId());
+      LOG.log(Level.INFO, "Got closed context: {0}", closedContext.getId());
       final ActiveContext parentContext = closedContext.getParentContext();
       if (parentContext != null) {
-        LOG.log(Level.FINE, "Closing parent context: {0}", parentContext.getId());
+        LOG.log(Level.INFO, "Closing parent context: {0}", parentContext.getId());
         parentContext.close();
       }
     }

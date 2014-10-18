@@ -58,6 +58,7 @@ public class BroadcastClient {
     try {
       final CommandLine cl = new CommandLine(cb);
       cl.registerShortNameOfClass(Local.class);
+      cl.registerShortNameOfClass(TimeOut.class);
       cl.registerShortNameOfClass(ModelDimensions.class);
       cl.registerShortNameOfClass(NumberOfReceivers.class);
       cl.processCommandLine(aArgs);
@@ -75,7 +76,7 @@ public class BroadcastClient {
   private static void storeCommandLineArgs(final Configuration commandLineConf) throws InjectionException {
     final Injector injector = Tang.Factory.getTang().newInjector(commandLineConf);
     isLocal = injector.getNamedInstance(Local.class);
-    jobTimeout = injector.getNamedInstance(TimeOut.class);
+    jobTimeout = injector.getNamedInstance(TimeOut.class) * 60 * 1000;
     dimensions = injector.getNamedInstance(ModelDimensions.class);
     numberOfReceivers = injector.getNamedInstance(NumberOfReceivers.class);
   }
@@ -91,12 +92,23 @@ public class BroadcastClient {
       LOG.log(Level.INFO, "Running ALS on YARN");
       runtimeConfiguration = YarnClientConfiguration.CONF.build();
     }
-    return null;
+    return runtimeConfiguration;
   }
 
   private static LauncherStatus runBroadcastReef(final Configuration runtimeConfiguration, final int jobTimeout)
       throws InjectionException {
 
+    final Configuration driverConfiguration = DriverConfiguration.CONF
+        .set(DriverConfiguration.DRIVER_IDENTIFIER, "BroadcastDriver")
+        .set(DriverConfiguration.GLOBAL_LIBRARIES, EnvironmentUtils.getClassLocation(BroadcastDriver.class))
+        .set(DriverConfiguration.ON_DRIVER_STARTED, BroadcastDriver.StartHandler.class)
+        .set(DriverConfiguration.ON_EVALUATOR_ALLOCATED, BroadcastDriver.EvaluatorAllocatedHandler.class)
+        .set(DriverConfiguration.ON_CONTEXT_ACTIVE, BroadcastDriver.ContextActiveHandler.class)
+        .set(DriverConfiguration.ON_CONTEXT_CLOSED, BroadcastDriver.ContextCloseHandler.class)
+        .set(DriverConfiguration.ON_TASK_FAILED, BroadcastDriver.FailedTaskHandler.class)
+        .build();
+
+/*
     final Configuration driverConfiguration = EnvironmentUtils
         .addClasspath(DriverConfiguration.CONF, DriverConfiguration.GLOBAL_LIBRARIES)
         .set(DriverConfiguration.ON_DRIVER_STARTED, BroadcastDriver.StartHandler.class)
@@ -106,7 +118,7 @@ public class BroadcastClient {
         .set(DriverConfiguration.ON_TASK_FAILED, BroadcastDriver.FailedTaskHandler.class)
         .set(DriverConfiguration.DRIVER_IDENTIFIER, "BroadcastDriver")
         .build();
-
+*/
     final Configuration groupCommServConfiguration = GroupCommService.getConfiguration();
 
     final Configuration mergedDriverConfiguration = Tang.Factory.getTang()
@@ -122,6 +134,9 @@ public class BroadcastClient {
 
 
   public static void main(final String[] args) throws InjectionException {
+
+    LOG.log(Level.INFO, "REEF job started");
+
     final Configuration commandLineConf = parseCommandLine(args);
     storeCommandLineArgs(commandLineConf);
     final Configuration runtimeConfiguration = getRuntimeConfiguration();

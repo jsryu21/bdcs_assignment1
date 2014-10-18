@@ -44,9 +44,9 @@ public class SlaveTask implements Task {
 
         case ReceiveModel:
           modelBroadcaster.receive();
-          if (Math.random() < 0.1) {
+         /* if (Math.random() < 0.1) {
             throw new RuntimeException("Simulated Failure");
-          }
+          } */
           modelReceiveAckReducer.send(true);
           break;
 

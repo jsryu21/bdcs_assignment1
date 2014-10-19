@@ -4,7 +4,8 @@ import com.microsoft.reef.annotations.audience.ClientSide;
 import com.microsoft.reef.client.DriverConfiguration;
 import com.microsoft.reef.client.DriverLauncher;
 import com.microsoft.reef.client.LauncherStatus;
-import com.microsoft.reef.io.network.nggroup.impl.driver.GroupCommService;
+import com.microsoft.reef.driver.evaluator.EvaluatorRequest;
+import com.microsoft.reef.io.data.loading.api.DataLoadingRequestBuilder;
 import com.microsoft.reef.runtime.local.client.LocalRuntimeConfiguration;
 import com.microsoft.reef.runtime.yarn.client.YarnClientConfiguration;
 import com.microsoft.reef.util.EnvironmentUtils;
@@ -18,15 +19,18 @@ import com.microsoft.tang.exceptions.BindException;
 import com.microsoft.tang.exceptions.InjectionException;
 import com.microsoft.tang.formats.AvroConfigurationSerializer;
 import com.microsoft.tang.formats.CommandLine;
+import com.microsoft.tang.formats.ConfigurationModule;
+import org.apache.hadoop.mapred.TextInputFormat;
 import org.apache.reef.example.groupcomm.parameters.ModelDimensions;
-import org.apache.reef.example.groupcomm.parameters.NumberOfReceivers;
+import org.apache.reef.example.groupcomm.parameters.SplitNum;
+import org.apache.reef.ml.parameters.*;
 
 import java.io.IOException;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
 /**
- * The Client for BGD job.
+ * The Client for ALS job.
  */
 @ClientSide
 public class AlsClient {
@@ -50,8 +54,13 @@ public class AlsClient {
 
   private static boolean isLocal;
   private static int jobTimeout;
+
+  private static String inputDir;
+  private static int evalSize;
+  private static int splitNum;
+
+  private static double lambda;
   private static int dimensions;
-  private static int numberOfReceivers;
 
   private static Configuration parseCommandLine(final String[] aArgs) {
     final JavaConfigurationBuilder cb = Tang.Factory.getTang().newConfigurationBuilder();
@@ -59,8 +68,14 @@ public class AlsClient {
       final CommandLine cl = new CommandLine(cb);
       cl.registerShortNameOfClass(Local.class);
       cl.registerShortNameOfClass(TimeOut.class);
+
+      cl.registerShortNameOfClass(InputDir.class);
+      cl.registerShortNameOfClass(EvalSize.class);
+      cl.registerShortNameOfClass(SplitNum.class);
+
+      cl.registerShortNameOfClass(Lambda.class);
       cl.registerShortNameOfClass(ModelDimensions.class);
-      cl.registerShortNameOfClass(NumberOfReceivers.class);
+
       cl.processCommandLine(aArgs);
     } catch (final BindException | IOException ex) {
       final String msg = "Unable to parse command line";
@@ -77,8 +92,11 @@ public class AlsClient {
     final Injector injector = Tang.Factory.getTang().newInjector(commandLineConf);
     isLocal = injector.getNamedInstance(Local.class);
     jobTimeout = injector.getNamedInstance(TimeOut.class) * 60 * 1000;
+    inputDir = injector.getNamedInstance(InputDir.class);
+    evalSize = injector.getNamedInstance(EvalSize.class);
+    splitNum = injector.getNamedInstance(SplitNum.class);
+    lambda = injector.getNamedInstance(Lambda.class);
     dimensions = injector.getNamedInstance(ModelDimensions.class);
-    numberOfReceivers = injector.getNamedInstance(NumberOfReceivers.class);
   }
 
   private static Configuration getRuntimeConfiguration() {
@@ -95,43 +113,43 @@ public class AlsClient {
     return runtimeConfiguration;
   }
 
-  private static LauncherStatus runBroadcastReef(final Configuration runtimeConfiguration, final int jobTimeout)
+  private static LauncherStatus runAlsReef(final Configuration runtimeConfiguration, final int jobTimeout)
       throws InjectionException {
 
-    final Configuration driverConfiguration = DriverConfiguration.CONF
-        .set(DriverConfiguration.DRIVER_IDENTIFIER, "BroadcastDriver")
+    final ConfigurationModule alsDriverConfiguration = DriverConfiguration.CONF
+        .set(DriverConfiguration.DRIVER_IDENTIFIER, "AlsDriver")
         .set(DriverConfiguration.GLOBAL_LIBRARIES, EnvironmentUtils.getClassLocation(AlsDriver.class))
-        .set(DriverConfiguration.ON_DRIVER_STARTED, AlsDriver.StartHandler.class)
-        .set(DriverConfiguration.ON_EVALUATOR_ALLOCATED, AlsDriver.EvaluatorAllocatedHandler.class)
         .set(DriverConfiguration.ON_CONTEXT_ACTIVE, AlsDriver.ContextActiveHandler.class)
         .set(DriverConfiguration.ON_CONTEXT_CLOSED, AlsDriver.ContextCloseHandler.class)
-        .set(DriverConfiguration.ON_TASK_FAILED, AlsDriver.FailedTaskHandler.class)
+        .set(DriverConfiguration.ON_TASK_FAILED, AlsDriver.FailedTaskHandler.class);
+
+    final EvaluatorRequest computeRequest = EvaluatorRequest.newBuilder()
+        .setNumber(1)
+        .setMemory(evalSize)
         .build();
 
-/*
-    final Configuration driverConfiguration = EnvironmentUtils
-        .addClasspath(DriverConfiguration.CONF, DriverConfiguration.GLOBAL_LIBRARIES)
-        .set(DriverConfiguration.ON_DRIVER_STARTED, BroadcastDriver.StartHandler.class)
-        .set(DriverConfiguration.ON_EVALUATOR_ALLOCATED, BroadcastDriver.EvaluatorAllocatedHandler.class)
-        .set(DriverConfiguration.ON_CONTEXT_ACTIVE, BroadcastDriver.ContextActiveHandler.class)
-        .set(DriverConfiguration.ON_CONTEXT_CLOSED, BroadcastDriver.ContextCloseHandler.class)
-        .set(DriverConfiguration.ON_TASK_FAILED, BroadcastDriver.FailedTaskHandler.class)
-        .set(DriverConfiguration.DRIVER_IDENTIFIER, "BroadcastDriver")
+    final Configuration alsDriverConfWithDataLoad = new DataLoadingRequestBuilder()
+        .setMemoryMB(evalSize)
+        .setInputFormatClass(TextInputFormat.class)
+        .setInputPath(inputDir)
+        .setNumberOfDesiredSplits(splitNum)
+        .setComputeRequest(computeRequest)
+
+        .setDriverConfigurationModule(alsDriverConfiguration)
+
         .build();
-*/
-    final Configuration groupCommServConfiguration = GroupCommService.getConfiguration();
 
     final Configuration mergedDriverConfiguration = Tang.Factory.getTang()
         .newConfigurationBuilder(groupCommServConfiguration, driverConfiguration)
+        .bindNamedParameter(Lambda.class, Double.toString(lambda))
         .bindNamedParameter(ModelDimensions.class, Integer.toString(dimensions))
-        .bindNamedParameter(NumberOfReceivers.class, Integer.toString(numberOfReceivers))
+        .bindNamedParameter(org.apache.reef.example.groupcomm.parameters.SplitNum.class, Integer.toString(splitNum))
         .build();
 
     LOG.info(new AvroConfigurationSerializer().toString(mergedDriverConfiguration));
 
     return DriverLauncher.getLauncher(runtimeConfiguration).run(mergedDriverConfiguration, jobTimeout);
   }
-
 
   public static void main(final String[] args) throws InjectionException {
 
@@ -140,7 +158,7 @@ public class AlsClient {
     final Configuration commandLineConf = parseCommandLine(args);
     storeCommandLineArgs(commandLineConf);
     final Configuration runtimeConfiguration = getRuntimeConfiguration();
-    final LauncherStatus status = runBroadcastReef(runtimeConfiguration, jobTimeout);
+    final LauncherStatus status = runAlsReef(runtimeConfiguration, jobTimeout);
 
     LOG.log(Level.INFO, "REEF job finished: {0}", status);
   }

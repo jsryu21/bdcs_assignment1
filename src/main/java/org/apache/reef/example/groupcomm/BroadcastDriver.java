@@ -26,7 +26,6 @@ import com.microsoft.tang.exceptions.InjectionException;
 import com.microsoft.tang.formats.ConfigurationSerializer;
 import com.microsoft.wake.EventHandler;
 import com.microsoft.wake.time.event.StartTime;
-import org.apache.reef.example.data.loading.LineCountTask;
 import org.apache.reef.example.groupcomm.operatorNames.ControlMessageBroadcaster;
 import org.apache.reef.example.groupcomm.operatorNames.ModelBroadcaster;
 import org.apache.reef.example.groupcomm.operatorNames.ModelReceiveAckReducer;

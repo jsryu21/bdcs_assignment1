@@ -31,7 +31,8 @@ public class LineCountTask implements Task {
     LOG.log(Level.INFO, "Als task started");
     int numEx = 0;
     for (final Pair<LongWritable, Text> keyValue : dataSet) {
-      LOG.log(Level.INFO, "Read line: {0}", keyValue);
+      LOG.log(Level.INFO, "Read line: {0}, numEx: {1}",
+          new Object[] {keyValue, numEx});
       ++numEx;
     }
 

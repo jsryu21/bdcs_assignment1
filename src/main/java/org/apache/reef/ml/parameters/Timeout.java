@@ -18,7 +18,8 @@ package org.apache.reef.ml.parameters;
 import com.microsoft.tang.annotations.Name;
 import com.microsoft.tang.annotations.NamedParameter;
 
-@NamedParameter(short_name = "input",
-                doc = "File or directory to read input data arranged by users from")
-public final class InputDir implements Name<String> {
+@NamedParameter(short_name = "time",
+                default_value = "100000",
+                doc = "Job timeout")
+public final class Timeout implements Name<Integer> {
 }

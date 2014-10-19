@@ -84,4 +84,3 @@ abstract class AbstractImmutableVector implements ImmutableVector {
     return new Tuple<Integer, Double>(minIdx, min);
   }
 }
-

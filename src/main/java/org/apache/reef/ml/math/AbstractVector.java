@@ -8,7 +8,7 @@ package org.apache.reef.ml.math;
  * <p/>
  * The only methods to be implemented by subclasses are get, set and size.
  */
-public abstract class AbstractVector extends org.apache.reef.example.groupcomm.math.AbstractImmutableVector implements Vector {
+public abstract class AbstractVector extends AbstractImmutableVector implements Vector {
 
   @Override
   public abstract void set(int i, double v);

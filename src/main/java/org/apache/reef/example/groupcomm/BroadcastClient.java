@@ -19,7 +19,7 @@ import com.microsoft.tang.exceptions.InjectionException;
 import com.microsoft.tang.formats.AvroConfigurationSerializer;
 import com.microsoft.tang.formats.CommandLine;
 import org.apache.reef.example.groupcomm.parameters.ModelDimensions;
-import org.apache.reef.example.groupcomm.parameters.SplitNum;
+import org.apache.reef.example.groupcomm.parameters.NumberOfReceivers;
 
 import java.io.IOException;
 import java.util.logging.Level;
@@ -60,7 +60,7 @@ public class BroadcastClient {
       cl.registerShortNameOfClass(Local.class);
       cl.registerShortNameOfClass(TimeOut.class);
       cl.registerShortNameOfClass(ModelDimensions.class);
-      cl.registerShortNameOfClass(SplitNum.class);
+      cl.registerShortNameOfClass(NumberOfReceivers.class);
       cl.processCommandLine(aArgs);
     } catch (final BindException | IOException ex) {
       final String msg = "Unable to parse command line";
@@ -78,7 +78,7 @@ public class BroadcastClient {
     isLocal = injector.getNamedInstance(Local.class);
     jobTimeout = injector.getNamedInstance(TimeOut.class) * 60 * 1000;
     dimensions = injector.getNamedInstance(ModelDimensions.class);
-    numberOfReceivers = injector.getNamedInstance(SplitNum.class);
+    numberOfReceivers = injector.getNamedInstance(NumberOfReceivers.class);
   }
 
   private static Configuration getRuntimeConfiguration() {
@@ -124,7 +124,7 @@ public class BroadcastClient {
     final Configuration mergedDriverConfiguration = Tang.Factory.getTang()
         .newConfigurationBuilder(groupCommServConfiguration, driverConfiguration)
         .bindNamedParameter(ModelDimensions.class, Integer.toString(dimensions))
-        .bindNamedParameter(SplitNum.class, Integer.toString(numberOfReceivers))
+        .bindNamedParameter(NumberOfReceivers.class, Integer.toString(numberOfReceivers))
         .build();
 
     LOG.info(new AvroConfigurationSerializer().toString(mergedDriverConfiguration));

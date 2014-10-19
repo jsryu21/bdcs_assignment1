@@ -31,7 +31,7 @@ import org.apache.reef.example.groupcomm.operatorNames.ModelBroadcaster;
 import org.apache.reef.example.groupcomm.operatorNames.ModelReceiveAckReducer;
 import org.apache.reef.example.groupcomm.parameters.AllCommunicationGroup;
 import org.apache.reef.example.groupcomm.parameters.ModelDimensions;
-import org.apache.reef.example.groupcomm.parameters.SplitNum;
+import org.apache.reef.example.groupcomm.parameters.NumberOfReceivers;
 
 import javax.inject.Inject;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -70,7 +70,7 @@ public final class BroadcastDriver {
       final GroupCommDriver groupCommDriver,
       final ConfigurationSerializer confSerializer,
       final @Parameter(ModelDimensions.class) int dimensions,
-      final @Parameter(SplitNum.class) int numberOfReceivers) {
+      final @Parameter(NumberOfReceivers.class) int numberOfReceivers) {
 
     this.requestor = requestor;
     this.groupCommDriver = groupCommDriver;

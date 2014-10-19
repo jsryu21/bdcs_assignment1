@@ -15,10 +15,14 @@
  */
 package org.apache.reef.ml.parameters;
 
-import com.microsoft.tang.annotations.Name;
-import com.microsoft.tang.annotations.NamedParameter;
+import com.microsoft.tang.Configuration;
 
-@NamedParameter(short_name = "input",
-                doc = "File or directory to read input data arranged by users from")
-public final class InputDir implements Name<String> {
+/**
+ * Interface for managing command line parameters defined by user.
+ * (Excluding default parameters such as timeout and inputDir.)
+ */
+public interface Parameters {
+  public Configuration getDriverConfiguration();
+  public Configuration getCompTaskConfiguration();
+  public Configuration getCtrlTaskConfiguration();
 }
